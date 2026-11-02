@@ -1,14 +1,54 @@
+# Adapted for BU SCC (/projectnb/fire-reflex, fire_env), Oct 2026.
+# Changes from ahriley/dipoles (see SCC-CHANGES.md):
+#  - paths: sim data under $FIRE_SIM_ROOT, outputs under $DIPOLE_DATA_DIR
+#  - healpy, pandas, deepdish, astropy imported only inside the functions that
+#    use them (fire_env lacks them; nothing in the basic fits needs them)
+#  - current gizmo_analysis/halo_analysis API: snapshot kind 'index' (not
+#    'snapshot'), assign_hosts_rotation=True, renamed assign_particle_indices kwargs
+#  - np.bool -> bool
+#  - NumPy 2 shims for np.cross (2-D) and np.linalg.eig (symmetric) used by utilities
+import os
 import numpy as np
-import healpy as hp
-import pandas as pd
 from scipy.optimize import Bounds, minimize, basinhopping
+
+
+# ---- NumPy >= 2 compatibility for Wetzel's utilities (fire_env has NumPy 2.5) ----
+# 1. np.cross no longer accepts 2-component vectors; utilities.coordinate uses them
+#    for v_phi (cylindrical) and for the disc-spin check in get_principal_axes.
+#    The 2-D cross product is the scalar a_x b_y - a_y b_x, which is what old NumPy returned.
+# 2. np.linalg.eig now returns complex arrays even for a real symmetric matrix, so the
+#    inertia-tensor rotation comes out complex64 (ComplexWarning). For real symmetric
+#    input use eigh, which is the correct solver there and returns real values;
+#    utilities re-sorts the eigenvalues and fixes the axis signs itself afterwards.
+# Both only change cases that NumPy 2 would otherwise reject or complexify.
+_np_cross = np.cross
+_np_eig = np.linalg.eig
+
+
+def _cross_compat(a, b, *args, **kwargs):
+    a, b = np.asarray(a), np.asarray(b)
+    if a.shape[-1] == 2 and b.shape[-1] == 2 and not args and not kwargs:
+        return a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
+    return _np_cross(a, b, *args, **kwargs)
+
+
+def _eig_compat(a):
+    arr = np.asarray(a)
+    if (arr.ndim == 2 and np.isrealobj(arr)
+            and np.allclose(arr, arr.T, rtol=1e-6, atol=0)):
+        return np.linalg.eigh(arr)
+    return _np_eig(a)
+
+
+np.cross = _cross_compat
+np.linalg.eig = _eig_compat
 import utilities.coordinate as wcoord
 import gizmo_analysis as gizmo
 import halo_analysis as halo
-import os
-import deepdish
-import astropy.units as u
 from pygaia import proper_motion_uncertainty
+
+SIM_ROOT = os.environ.get('FIRE_SIM_ROOT', '/projectnb/fire-reflex/latte')
+DATA_DIR = os.environ.get('DIPOLE_DATA_DIR', '/projectnb/fire-reflex/rpei/data')
 
 # tracer array is [relative distance err, vlos err, absolute magnitude]
 # distances + vlos errors from Adrian. absmags are from:
@@ -22,11 +62,11 @@ tracer_pars = {'rgb': [0.1, 5, -2.158428],
 
 
 def get_simulation_directory(sim):
-    return f'data/latte_metaldiff/{sim}_res7100/'
+    return os.path.join(SIM_ROOT, f'{sim}_res7100/')
 
 
 def get_data_directory():
-    return os.path.join(os.path.dirname(__file__), '..', 'data')
+    return DATA_DIR
 
 
 def get_rockstar_directory(sim):
@@ -44,7 +84,8 @@ def load_data(sim, snapshot, part_type=['star'], assign_pointers=False,
                                         snapshot_value_kind=snapshot_kind,
                                         simulation_directory=sim_dir,
                                         assign_pointers=assign_pointers,
-                                        sort_dark_by_id=sort_dark_by_id)
+                                        sort_dark_by_id=sort_dark_by_id,
+                                        assign_hosts_rotation=True)
     halos = load_halo_catalog(sim, snapshot)
     return part, halos
 
@@ -52,7 +93,7 @@ def load_data(sim, snapshot, part_type=['star'], assign_pointers=False,
 def load_halo_catalog(sim, snapshot):
     sim_dir = get_simulation_directory(sim)
     rockstar_dir = get_rockstar_directory(sim)
-    halos = halo.io.IO.read_catalogs('snapshot', snapshot, sim_dir,
+    halos = halo.io.IO.read_catalogs('index', snapshot, sim_dir,
                                      rockstar_directory=rockstar_dir)
     return halos
 
@@ -87,6 +128,7 @@ def mask_nondh_streams_stars(stars, sim, mask_groups=None):
         mask_groups = ['dwarf galaxy', 'coherent stream']
     sim_dir = get_simulation_directory(sim)
     streamfile = os.path.join(sim_dir, 'streams/all_groups.h5')
+    import deepdish  # not in fire_env; may be replaceable by h5py
     groups = deepdish.io.load(streamfile)
     is_stream = np.isin(groups['classification'], mask_groups)
     stars_in_streams = np.unique(np.hstack(groups['st_indices'][is_stream]))
@@ -151,9 +193,9 @@ def assign_particles_to_halo(sim, snapshot, part_type='star',
     kwargs = {'lowres_mass_frac_max': 1e-6,
               'mass_limits': [1e8, mass_upper_lim],
               'vel_circ_max_limits': [1, np.inf],
-              'halo_radius_frac_max': 1,
+              'halo_radius_factor_max': 1,     # was halo_radius_frac_max
               'radius_max': 400,
-              'halo_velocity_frac_max': 2.0,
+              'velocity_factor_max': 2.0,      # was halo_velocity_frac_max
               'particle_number_fraction_converge': np.inf}
 
     particle_class = halo.io.ParticleClass()
@@ -163,11 +205,14 @@ def assign_particles_to_halo(sim, snapshot, part_type='star',
     new_indices = [np.array(idx_list).astype(int) for idx_list in halos[key]]
     new_indices = np.array(new_indices, dtype='object')
     halos[key] = new_indices
+    os.makedirs(data_dir, exist_ok=True)
     np.save(filename, new_indices)
     return halos
 
 
 def hpx_velocities(lon, lat, vels, nside):
+    import healpy as hp
+    import pandas as pd
     indices = hp.ang2pix(nside, lat, lon)
     npix = hp.nside2npix(nside)
 
@@ -186,7 +231,7 @@ def hpx_velocities(lon, lat, vels, nside):
     hpx_maps = hp.ma(hpx_maps)
 
     # mask values
-    mask = np.zeros_like(hpx_maps, dtype=np.bool)
+    mask = np.zeros_like(hpx_maps, dtype=bool)
     mask[hpx_maps == 0] = 1
     hpx_maps.mask = mask
     return hpx_maps
@@ -367,7 +412,8 @@ def track_halo_indices(tree, tree_index):
 def get_z0_rotation_matrix(sim):
     sim_dir = get_simulation_directory(sim)
     # TODO: do I actually need to read particle data for this? seems overkill
-    part = gizmo.io.Read.read_snapshots('star', 'redshift', 0, sim_dir)
+    part = gizmo.io.Read.read_snapshots('star', 'redshift', 0, sim_dir,
+                                        assign_hosts_rotation=True)
     rotation_matrix = part.host['rotation'][0]
     return rotation_matrix
 
@@ -414,6 +460,7 @@ def snapshot_to_time(sim, snapshots):
 
 
 def sample_uncertainties(dist, tracer='rgb', release='dr3'):
+    import astropy.units as u
     rng = np.random.default_rng()
     e_dist_rel, e_vlos_abs, abs_mag = tracer_pars[tracer]
 
@@ -443,6 +490,7 @@ def sample_uncertainties(dist, tracer='rgb', release='dr3'):
 
 
 def mask_faint_tracers(dist, tracer='rgb', gmag_lim=20.7):
+    import astropy.units as u
     abs_mag = tracer_pars[tracer][2]
     gmag = abs_mag + 5 * np.log10(dist*u.kpc / (10*u.pc))
     mask = gmag < gmag_lim
