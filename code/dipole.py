@@ -137,25 +137,30 @@ def mask_nondh_streams_stars(stars, sim, mask_groups=None):
     return mask
 
 
-def mask_danny_streams_stars(stars, sim):
-    data_dir = get_data_directory()
-    filename = f'mergers_{sim}_all.npy'
-    filename = os.path.join(data_dir, 'danny-streams', filename)
+def danny_streams_star_indices(sim):
+    """z = 0 star indices in Danny's merger debris (unique, sorted)."""
+    # files are named mergers-{sim}-all.npy (hyphens); Alex's code had underscores
+    filename = os.path.join(get_data_directory(), 'danny-streams', f'mergers-{sim}-all.npy')
     stars_in_streams = np.load(filename, allow_pickle=True)
-    stars_in_streams = np.unique(np.hstack(stars_in_streams))
+    return np.unique(np.hstack(stars_in_streams)).astype(np.int64)
+
+
+def m12i_messy_stream_star_indices():
+    """z = 0 star indices in Emily's messy big stream in m12i (unique, sorted)."""
+    filename = os.path.join(get_data_directory(), 'emily-streams', 'messy_big_stream_m12i.txt')
+    stars_in_stream = np.loadtxt(filename, dtype=np.int64)
+    return np.unique(np.hstack(stars_in_stream))
+
+
+def mask_danny_streams_stars(stars, sim):
     mask = np.ones_like(stars['mass'], dtype=bool)
-    mask[stars_in_streams] = 0
+    mask[danny_streams_star_indices(sim)] = 0
     return mask
 
 
 def mask_m12i_messy_stream(stars):
-    data_dir = get_data_directory()
-    filename = 'messy_big_stream_m12i.txt'
-    filename = os.path.join(data_dir, 'emily-streams', filename)
-    stars_in_stream = np.loadtxt(filename, dtype=int)
-    stars_in_stream = np.unique(np.hstack(stars_in_stream))
     mask = np.ones_like(stars['mass'], dtype=bool)
-    mask[stars_in_stream] = 0
+    mask[m12i_messy_stream_star_indices()] = 0
     return mask
 
 
