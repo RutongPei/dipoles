@@ -2,7 +2,7 @@
 (the direct-estimator version of Alex's scripts/m12i_progressive.py).
 
 Cumulative steps, in Alex's order (a step is skipped if its mask is missing):
-    all -> - bound (Alex's assignment) -> - messy stream -> - Danny debris -> - Nondh streams
+    all -> - bound (Alex's assignment) -> - messy stream -> - Danny streams -> - Nondh streams
 For each step: direct v_travel in Alex's binned (5 kpc shells) and complementary (r > c, < 305 kpc)
 selections, same as 04_direct_m12i.py.
 
@@ -40,7 +40,7 @@ CENTERS, WIDTH, HIGH = direct04.CENTERS, direct04.WIDTH, direct04.HIGH
 
 STEP_ORDER = [('bound', 'bound_alex'), ('messy', 'messy'), ('danny', 'danny'), ('nondh', 'nondh')]
 LABELS = {'all': 'all stars', 'bound': '- bound (Alex)', 'messy': '- messy stream (Emily)',
-          'danny': '- debris (Danny)', 'nondh': '- streams (Nondh)', 'rest': 'remaining'}
+          'danny': '- Danny streams', 'nondh': '- streams (Nondh)', 'rest': 'remaining'}
 PLOT_LABELS = {'all': 'all stars', 'bound': 'Alex bound', 'messy': 'Emily messy streams',
                'danny': 'Danny streams', 'nondh': 'Nondh streams'}
 PLOT_COLORS = {'all': 'cyan', 'bound': 'royalblue', 'messy': 'fuchsia', 'danny': 'tomato',

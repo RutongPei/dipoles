@@ -138,7 +138,7 @@ def mask_nondh_streams_stars(stars, sim, mask_groups=None):
 
 
 def danny_streams_star_indices(sim):
-    """z = 0 star indices in Danny's merger debris (unique, sorted)."""
+    """z = 0 star indices in Danny streams (mergers-{sim}-all.npy) (unique, sorted)."""
     # files are named mergers-{sim}-all.npy (hyphens); Alex's code had underscores
     filename = os.path.join(get_data_directory(), 'danny-streams', f'mergers-{sim}-all.npy')
     stars_in_streams = np.load(filename, allow_pickle=True)

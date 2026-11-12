@@ -1,9 +1,9 @@
-"""Build the stream / debris masks for m12i snapshot 600 on the saved halo stars,
+"""Build the stream masks for m12i snapshot 600 on the saved halo stars,
 and check that each list uses the same star indexing as m12i-600-halostars.npz.
 
 Sources (all z = 0 star array indices, read from $DIPOLE_DATA_DIR):
     messy  : emily-streams/messy_big_stream_m12i.txt        (Emily's messy big stream)
-    danny  : danny-streams/mergers-m12i-all.npy               (Danny's merger debris)
+    danny  : danny-streams/mergers-m12i-all.npy               (Danny streams; selection unconfirmed)
     nondh  : --nondh FILE (optional) from the SAPFIRE catalogue (Panithanpaisal+21)
              .npy / .txt = plain list of star indices;
              .csv = needs an 'index' column; rows are kept only where simname contains the sim name
