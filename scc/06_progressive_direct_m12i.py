@@ -43,7 +43,7 @@ LABELS = {'all': 'all stars', 'bound': '- bound (Alex)', 'messy': '- messy strea
           'danny': '- debris (Danny)', 'nondh': '- streams (Nondh)', 'rest': 'remaining'}
 PLOT_LABELS = {'all': 'all stars', 'bound': 'Alex bound', 'messy': 'Emily messy streams',
                'danny': 'Danny streams', 'nondh': 'Nondh streams'}
-PLOT_COLORS = {'all': 'cyan', 'bound': 'royalblue', 'messy': 'fuchsia', 'danny': 'crimson',
+PLOT_COLORS = {'all': 'cyan', 'bound': 'royalblue', 'messy': 'fuchsia', 'danny': 'tomato',
                'nondh': 'darkorange'}
 
 
