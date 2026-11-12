@@ -6,8 +6,9 @@ Sources (all z = 0 star array indices, read from $DIPOLE_DATA_DIR):
     danny  : danny-streams/mergers-m12i-all.npy               (Danny streams; selection unconfirmed)
     nondh  : --nondh FILE (optional) from the SAPFIRE catalogue (Panithanpaisal+21)
              .npy / .txt = plain list of star indices;
-             .csv = needs an 'index' column; rows are kept only where simname contains the sim name
-             (if a 'simname' column exists). Add --nondh-xyz-check if the csv also has x, y, z.
+             .csv = SAPFIRE download; rows kept where simname contains the sim name. The star index is
+             taken from st_index or index, whichever matches the saved stars (--nondh-col to force).
+             If position_x/y/z (or x/y/z) are present, catalogue distances are checked against ours.
 
 Run from the repo top level (login node is fine; needs ~2 GB RAM, no snapshot read):
     python scc/05_stream_masks_m12i.py
@@ -40,7 +41,7 @@ def messy_indices(data_dir):
     return np.unique(a), len(a)
 
 
-def nondh_indices(path, sim):
+def nondh_indices(path, sim, sidx, col='auto'):
     """Returns (unique indices, raw count, xyz or None)."""
     ext = os.path.splitext(path)[1].lower()
     if ext == '.npy':
@@ -51,22 +52,34 @@ def nondh_indices(path, sim):
         a = np.loadtxt(path, dtype=np.int64)
         return np.unique(a), len(a), None
     if ext == '.csv':
-        idx, xyz = [], []
         with open(path) as f:
             rd = csv.DictReader(f)
-            cols = {c.lower(): c for c in rd.fieldnames}
-            if 'index' not in cols:
-                sys.exit(f'{path}: no "index" column (columns: {rd.fieldnames})')
-            has_xyz = all(k in cols for k in ('x', 'y', 'z'))
-            for r in rd:
-                if 'simname' in cols and sim not in r[cols['simname']]:
-                    continue
-                idx.append(int(float(r[cols['index']])))
-                if has_xyz:
-                    xyz.append([float(r[cols[k]]) for k in ('x', 'y', 'z')])
-        idx = np.array(idx, dtype=np.int64)
+            cols = {c.strip().lower(): c for c in rd.fieldnames}
+            rows = [r for r in rd
+                    if 'simname' not in cols or sim in r[cols['simname']]]
+        print(f'[nondh] {path}: columns {list(cols)}; {len(rows):,} rows for {sim}')
+        # SAPFIRE has both 'index' and 'st_index'; which one is the z = 0 star array index is
+        # decided by which matches our saved stars (or forced with --nondh-col)
+        cands = [c for c in ('st_index', 'index') if c in cols]
+        if col != 'auto':
+            cands = [col]
+        if not cands or any(c not in cols for c in cands):
+            sys.exit(f'{path}: need an index column (st_index or index); have {list(cols)}')
+        best, best_frac = None, -1
+        for c in cands:
+            a = np.array([int(float(r[cols[c]])) for r in rows], dtype=np.int64)
+            frac = np.isin(np.unique(a), sidx).mean()
+            print(f'[nondh] column {c!r}: {len(np.unique(a)):,} unique, range {a.min():,}..{a.max():,}, '
+                  f'{100 * frac:.1f}% found among the saved stars')
+            if frac > best_frac:
+                best, best_frac, idx = c, frac, a
+        print(f'[nondh] using column {best!r}')
+        xyz = None
+        for keys in (('x', 'y', 'z'), ('position_x', 'position_y', 'position_z')):
+            if all(k in cols for k in keys):
+                xyz = np.array([[float(r[cols[k]]) for k in keys] for r in rows])
         u, first = np.unique(idx, return_index=True)
-        return u, len(idx), (np.array(xyz)[first] if xyz else None)
+        return u, len(idx), (xyz[first] if xyz is not None else None)
     sys.exit(f'{path}: unsupported extension {ext} (use .npy, .txt or .csv)')
 
 
@@ -110,6 +123,9 @@ def main():
     ap.add_argument('--sim', default='m12i')
     ap.add_argument('--snap', type=int, default=600)
     ap.add_argument('--nondh', default=None, help='SAPFIRE star list for this host (.npy/.txt/.csv)')
+    ap.add_argument('--nondh-col', default='auto',
+                    help="csv column holding the z = 0 star index (default: whichever of st_index / "
+                         "index matches the saved stars best)")
     ap.add_argument('--data-dir', default=DATA_DIR)
     args = ap.parse_args()
     tag = f'{args.sim}-{args.snap}'
@@ -129,7 +145,7 @@ def main():
     u, n_raw = danny_indices(args.data_dir, args.sim)
     sets['danny'] = (u, n_raw, None)
     if args.nondh:
-        sets['nondh'] = nondh_indices(args.nondh, args.sim)
+        sets['nondh'] = nondh_indices(args.nondh, args.sim, sidx, args.nondh_col)
 
     # ---- per-source checks ----
     print('\n=== sources ===')
