@@ -21,7 +21,7 @@ Needs: m12i-600-halostars.npz (02) and m12i-600-streammasks.npz (05). numpy + ma
 Outputs ($DIPOLE_DATA_DIR):
     m12i-600-progressive-direct.csv             one row per step / selection / centre
     m12i-600-progressive-components.csv         one row per piece / selection / centre
-    m12i-600-progressive-direct.png
+    m12i-600-progressive-direct.png             |v_travel| after each step, binned and complementary
 (suffix -number for number weighting)
 """
 import argparse
@@ -41,8 +41,10 @@ CENTERS, WIDTH, HIGH = direct04.CENTERS, direct04.WIDTH, direct04.HIGH
 STEP_ORDER = [('bound', 'bound_alex'), ('messy', 'messy'), ('danny', 'danny'), ('nondh', 'nondh')]
 LABELS = {'all': 'all stars', 'bound': '- bound (Alex)', 'messy': '- messy stream (Emily)',
           'danny': '- debris (Danny)', 'nondh': '- streams (Nondh)', 'rest': 'remaining'}
-COLORS = {'all': '0.55', 'bound': '#1b6ac9', 'messy': '#d95f02', 'danny': '#1b9e77',
-          'nondh': '#7570b3', 'rest': 'k'}
+PLOT_LABELS = {'all': 'all stars', 'bound': 'Alex bound', 'messy': 'Emily messy streams',
+               'danny': 'Danny streams', 'nondh': 'Nondh streams'}
+PLOT_COLORS = {'all': 'cyan', 'bound': 'royalblue', 'messy': 'fuchsia', 'danny': 'crimson',
+               'nondh': 'darkorange'}
 
 
 def fmt(x):
@@ -138,36 +140,19 @@ def main():
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(2, 2, figsize=(11.5, 8), sharex=True)
-    for j, analysis in enumerate(['binned', 'complementary']):
-        ax = axes[0, j]
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.3), sharey=True)
+    for ax, analysis in zip(axes, ['binned', 'complementary']):
         for name, _ in steps:
             rr = np.array([r[2:] for r in step_rows if r[0] == name and r[1] == analysis], float)
-            ax.plot(rr[:, 0], rr[:, 3], marker='o', ms=2.5, lw=1.5, color=COLORS[name],
-                    label=LABELS[name] if name == 'all' else 'then ' + LABELS[name])
-            ax.plot(rr[:, 0], rr[:, 6], ls=':', lw=1, color=COLORS[name])
-        ax.set_title(f'{analysis}' + (' (5 kpc shells)' if analysis == 'binned'
-                                      else f' (r > centre, < {HIGH} kpc)'))
+            ax.plot(rr[:, 0], rr[:, 3], marker='o', ms=2.5, lw=1.5, color=PLOT_COLORS[name],
+                    label=PLOT_LABELS[name])
+        ax.set_title(analysis)
+        ax.set_xlabel(r'$r$ [kpc]')
         ax.grid(alpha=0.25)
-
-        ax = axes[1, j]
-        tot = None
-        for name, _ in pieces:
-            rr = np.array([r[2:] for r in comp_rows if r[0] == name and r[1] == analysis], float)
-            ax.plot(rr[:, 0], rr[:, 3], marker='o', ms=2.5, lw=1.5, color=COLORS[name],
-                    label=LABELS[name].lstrip('- ') if name != 'rest' else 'remaining stars')
-            tot = rr[:, 3] if tot is None else tot + rr[:, 3]
-        ax.plot(rr[:, 0], tot, color='0.55', lw=2.5, alpha=0.6, zorder=0, label='sum = |v| all stars')
-        ax.axhline(0, color='0.3', lw=0.6)
-        ax.set_xlabel('distance from host centre [kpc]')
-        ax.grid(alpha=0.25)
-    axes[0, 0].set_ylabel(r'$|v_{\rm travel}|$ after each step [km/s]')
-    axes[1, 0].set_ylabel(r'contribution along $\hat v_{\rm all}$ [km/s]')
-    axes[0, 0].plot([], [], ls=':', color='k', label='dotted: shot-noise floor')
-    axes[0, 0].legend(fontsize=7, frameon=False)
-    axes[1, 0].legend(fontsize=7, frameon=False)
-    fig.suptitle(f'{args.sim} snapshot {args.snap}: progressive masking, direct v_travel '
-                 f'({args.weights}-weighted)', fontsize=11)
+    axes[0].set_ylabel(r'$V_{\rm travel}$ [km/s]')
+    axes[0].set_ylim(bottom=0)
+    axes[0].legend(fontsize=8, frameon=False)
+    fig.suptitle(f'{args.sim} progressive', fontsize=12)
     fig.tight_layout()
     out = os.path.join(args.data_dir, f'{tag}-progressive-direct{suffix}.png')
     fig.savefig(out, dpi=150)
