@@ -18,7 +18,9 @@ projection on the direction of v_all adds up exactly to |v_all|, so the bottom p
 pieces carry the signal and which cancel. This does not depend on the masking order.
 
 Needs: m12i-600-halostars.npz (02) and m12i-600-streammasks.npz (05). numpy + matplotlib only.
+Other hosts/snapshots: make both npz files with 07_read_snapshot_pointers.py, then --sim/--snap.
     python scc/06_progressive_direct_m12i.py
+    python scc/06_progressive_direct_m12i.py --sim m12f --snap 463
     python scc/06_progressive_direct_m12i.py --weights number
 
 Outputs ($DIPOLE_DATA_DIR):
@@ -155,7 +157,11 @@ def main():
     axes[0].set_ylabel(r'$V_{\rm travel}$ [km/s]')
     axes[0].set_ylim(bottom=0)
     axes[0].legend(fontsize=8, frameon=False)
-    fig.suptitle(f'{args.sim} progressive', fontsize=12)
+    title = f'{args.sim} progressive'
+    if args.snap != 600:
+        title += f' (snapshot {args.snap}, z = {float(d["redshift"]):.3f})' if 'redshift' in d.files \
+            else f' (snapshot {args.snap})'
+    fig.suptitle(title, fontsize=12)
     fig.tight_layout()
     out = os.path.join(args.data_dir, f'{tag}-progressive-direct{suffix}.png')
     fig.savefig(out, dpi=150)
