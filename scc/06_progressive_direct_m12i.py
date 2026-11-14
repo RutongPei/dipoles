@@ -43,13 +43,15 @@ _spec.loader.exec_module(direct04)
 direct_v_travel, vec_to_angles = direct04.direct_v_travel, direct04.vec_to_angles
 CENTERS, WIDTH, HIGH = direct04.CENTERS, direct04.WIDTH, direct04.HIGH
 
-STEP_ORDER = [('bound', 'bound_alex'), ('messy', 'messy'), ('nondh', 'nondh'), ('danny', 'danny')]
+STEP_ORDER = [('bound', 'bound_alex'), ('messy', 'messy'), ('stream', 'stream'), ('nondh', 'nondh'),
+              ('danny', 'danny')]
 LABELS = {'all': 'all stars', 'bound': '- bound (Alex)', 'messy': '- messy stream (Emily)',
-          'danny': '- Danny streams', 'nondh': '- streams (Nondh)', 'rest': 'remaining'}
+          'danny': '- Danny streams', 'nondh': '- streams (Nondh)', 'stream': '- z0 stream table',
+          'rest': 'remaining'}
 PLOT_LABELS = {'all': 'all stars', 'bound': 'Alex bound', 'messy': 'Emily messy streams',
-               'danny': 'Danny streams', 'nondh': 'Nondh streams'}
+               'danny': 'Danny streams', 'nondh': 'Nondh streams', 'stream': 'z0 stream table'}
 PLOT_COLORS = {'all': 'cyan', 'bound': 'royalblue', 'messy': 'fuchsia', 'danny': 'tomato',
-               'nondh': 'darkorange'}
+               'nondh': 'darkorange', 'stream': 'mediumseagreen'}
 
 
 def fmt(x):
