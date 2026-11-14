@@ -1,15 +1,18 @@
 """Progressive masking in m12i snapshot 600 with the direct v_travel estimator
 (the direct-estimator version of Alex's scripts/m12i_progressive.py).
 
-Cumulative steps, in Alex's order (a step is skipped if its mask is missing):
-    all -> - bound (Alex's assignment) -> - messy stream -> - Danny streams -> - Nondh streams
+Cumulative steps (a step is skipped if its mask is missing):
+    all -> - bound (Alex's assignment) -> - messy stream -> - Nondh streams -> - Danny streams
+Alex's order had Danny before Nondh, but ~98% of Nondh's stars are in Danny's list, so with that
+order the Nondh step is empty. Nondh first shows the catalogued coherent streams on their own and
+Danny then adds the rest of the accreted debris.
 For each step: direct v_travel in Alex's binned (5 kpc shells) and complementary (r > c, < 305 kpc)
 selections, same as 04_direct_m12i.py.
 
 Component breakdown. Because the direct estimate is a weighted mean, for any selection
     v_all = sum_k (W_k / W_all) * v_k        (W = total weight: mass, or number of stars)
 over disjoint pieces k. The pieces are what each step removes that earlier steps did not:
-    bound, messy minus bound, danny minus (bound, messy), nondh minus (...), and the rest.
+    bound, messy minus bound, nondh minus (bound, messy), danny minus (...), and the rest.
 c_k = (W_k / W_all) v_k is the vector each piece contributes to the all-star v_travel. Its
 projection on the direction of v_all adds up exactly to |v_all|, so the bottom panels show which
 pieces carry the signal and which cancel. This does not depend on the masking order.
@@ -38,7 +41,7 @@ _spec.loader.exec_module(direct04)
 direct_v_travel, vec_to_angles = direct04.direct_v_travel, direct04.vec_to_angles
 CENTERS, WIDTH, HIGH = direct04.CENTERS, direct04.WIDTH, direct04.HIGH
 
-STEP_ORDER = [('bound', 'bound_alex'), ('messy', 'messy'), ('danny', 'danny'), ('nondh', 'nondh')]
+STEP_ORDER = [('bound', 'bound_alex'), ('messy', 'messy'), ('nondh', 'nondh'), ('danny', 'danny')]
 LABELS = {'all': 'all stars', 'bound': '- bound (Alex)', 'messy': '- messy stream (Emily)',
           'danny': '- Danny streams', 'nondh': '- streams (Nondh)', 'rest': 'remaining'}
 PLOT_LABELS = {'all': 'all stars', 'bound': 'Alex bound', 'messy': 'Emily messy streams',
