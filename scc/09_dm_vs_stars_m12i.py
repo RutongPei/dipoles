@@ -28,12 +28,13 @@ Selections: binned (5 kpc shells, centres 30-300) and complementary (c < r < 305
 Run on a compute node (reads 70M DM particles; ~10-15 GB; ~10-15 min, most of it in the DM
 complementary selections of up to 25M particles; login nodes kill it at 15 min CPU):
     python scc/09_dm_vs_stars_m12i.py
-    python scc/09_dm_vs_stars_m12i.py --show-dm-all    # also plot DM without the subhalo mask
-    python scc/09_dm_vs_stars_m12i.py --replot         # plot from the csv only, no snapshot read
+    python scc/09_dm_vs_stars_m12i.py --dm both          # also plot DM without the subhalo mask
+    python scc/09_dm_vs_stars_m12i.py --replot --dm all  # from the csv only: stars vs all DM
+    python scc/09_dm_vs_stars_m12i.py --replot           # from the csv only, no snapshot read
 
 Outputs ($DIPOLE_RESULTS_DIR/m12i-600/, default /projectnb/fire-reflex/rpei/results/m12i-600/):
     m12i-600-dm-vs-stars.csv   rows: tracer (stars_all_masks, dm_bound_removed, dm_all) x selection x centre
-    m12i-600-dm-vs-stars.png
+    m12i-600-dm-vs-stars.png   (--dm all: -dmall.png; --dm both: -dmboth.png)
 """
 import argparse
 import csv
@@ -158,7 +159,9 @@ def plot(csv_path, out_png, sim, tracers):
                 continue
             x = np.array([float(r['center_kpc']) for r in rr])
             y = np.array([float(r['v_travel']) for r in rr])
-            st = TRACERS[t]
+            st = dict(TRACERS[t])
+            if t == 'dm_all' and 'dm_bound_removed' not in tracers:   # the only DM curve: solid black
+                st.update(color='black', ls='-')
             ax.plot(x, y, marker='o', ms=2.5, lw=1.5, color=st['color'], ls=st.get('ls', '-'),
                     label=st['label'])
         ax.set_title(analysis)
@@ -178,7 +181,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--sim', default='m12i')
     ap.add_argument('--snap', type=int, default=600)
-    ap.add_argument('--show-dm-all', action='store_true', help='also plot DM without subhalo mask')
+    ap.add_argument('--dm', choices=['removed', 'all', 'both'], default='removed',
+                    help='DM curve(s) to plot: subhalos removed (default), all DM, or both')
+    ap.add_argument('--show-dm-all', action='store_true', help='same as --dm both (kept for old commands)')
     ap.add_argument('--replot', action='store_true', help='only redraw the figure from the csv')
     ap.add_argument('--data-dir', default=os.environ.get('DIPOLE_DATA_DIR',
                                                          '/projectnb/fire-reflex/rpei/data'),
@@ -191,8 +196,13 @@ def main():
     out_dir = os.path.join(args.results_dir, tag)
     os.makedirs(out_dir, exist_ok=True)
     out_csv = os.path.join(out_dir, f'{tag}-dm-vs-stars.csv')
-    out_png = os.path.join(out_dir, f'{tag}-dm-vs-stars.png')
-    tracers = ['stars_all_masks', 'dm_bound_removed'] + (['dm_all'] if args.show_dm_all else [])
+    if args.show_dm_all:
+        args.dm = 'both'
+    dm_tracers = {'removed': ['dm_bound_removed'], 'all': ['dm_all'],
+                  'both': ['dm_bound_removed', 'dm_all']}[args.dm]
+    tracers = ['stars_all_masks'] + dm_tracers
+    suffix = {'removed': '', 'all': '-dmall', 'both': '-dmboth'}[args.dm]
+    out_png = os.path.join(out_dir, f'{tag}-dm-vs-stars{suffix}.png')
     if args.replot:
         plot(out_csv, out_png, args.sim, tracers)
         return
