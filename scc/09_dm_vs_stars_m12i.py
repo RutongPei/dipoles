@@ -2,8 +2,8 @@
 
 Is the residual stellar v_travel (all masks applied, ~15-19 km/s complementary at 140-250 kpc)
 the whole outer halo moving relative to the inner galaxy, or leftover stellar substructure?
-Dark matter is ~25x more massive and has no stream catalogues, so it shows what the halo as a
-whole does.
+Dark matter outweighs the stars ~285:1 at 20-305 kpc in m12i and has no stream catalogues, so it
+shows what the halo as a whole does.
 
 Stars: m12i-600-halostars.npz (02) + m12i-600-streammasks.npz (05), all masks applied in 06's
 order: bound (Alex) -> messy -> Nondh -> Danny.
@@ -25,7 +25,8 @@ and compared with mask_bound_alex.
 Direct estimator (same as 04/06): v_travel = -(sum m v)/(sum m) over the selection.
 Selections: binned (5 kpc shells, centres 30-300) and complementary (c < r < 305 kpc).
 
-Run on a compute node (reads 70M DM particles; ~10-15 GB):
+Run on a compute node (reads 70M DM particles; ~10-15 GB; ~10-15 min, most of it in the DM
+complementary selections of up to 25M particles; login nodes kill it at 15 min CPU):
     python scc/09_dm_vs_stars_m12i.py
     python scc/09_dm_vs_stars_m12i.py --show-dm-all    # also plot DM without the subhalo mask
     python scc/09_dm_vs_stars_m12i.py --replot         # plot from the csv only, no snapshot read
@@ -123,6 +124,7 @@ def selection(dist, analysis, c):
 
 def direct_rows(name, xyz, v, w, dist, keep):
     rows = []
+    say(f'direct v_travel for {name} ({keep.sum():,} particles, 2 x {len(CENTERS)} selections)')
     for analysis in ['binned', 'complementary']:
         for c in CENTERS:
             s = keep & selection(dist, analysis, c)
@@ -133,6 +135,7 @@ def direct_rows(name, xyz, v, w, dist, keep):
             vt, th, ph = vec_to_angles(r['vec'])
             rows.append([name, analysis, int(c), r['n'], vt, th, ph, r['floor'], *r['vec'],
                          r['lopsided']])
+        say(f'  {name} {analysis} done')
     return rows
 
 
