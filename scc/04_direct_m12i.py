@@ -86,10 +86,16 @@ def main():
     ap.add_argument('--masks', default='none,bound_alex,bound_rockstar')
     ap.add_argument('--weights', choices=['mass', 'number'], default='mass')
     ap.add_argument('--data-dir', default=os.environ.get('DIPOLE_DATA_DIR',
-                                                         '/projectnb/fire-reflex/rpei/data'))
+                                                         '/projectnb/fire-reflex/rpei/data'),
+                    help='inputs: halostars/streammasks npz, catalogues')
+    ap.add_argument('--results-dir', default=os.environ.get('DIPOLE_RESULTS_DIR',
+                                                            '/projectnb/fire-reflex/rpei/results'),
+                    help='outputs go to <results-dir>/<sim>-<snap>/')
     args = ap.parse_args()
 
     tag = f'{args.sim}-{args.snap}'
+    out_dir = os.path.join(args.results_dir, tag)
+    os.makedirs(out_dir, exist_ok=True)
     d = np.load(os.path.join(args.data_dir, f'{tag}-halostars.npz'))
     xyz = d['xyz'].astype(np.float64)
     v_xyz = d['v_xyz'].astype(np.float64)
@@ -123,7 +129,7 @@ def main():
                       f'(theta {th:5.1f}, phi {ph:5.1f})  lopsided {r["lopsided"]:.2f}', flush=True)
 
     suffix = '' if args.weights == 'mass' else '-number'
-    out_csv = os.path.join(args.data_dir, f'{tag}-direct{suffix}.csv')
+    out_csv = os.path.join(out_dir, f'{tag}-direct{suffix}.csv')
     with open(out_csv, 'w', newline='') as f:
         wr = csv.writer(f)
         wr.writerow(header)
@@ -137,7 +143,7 @@ def main():
     import matplotlib.pyplot as plt
 
     fits = {}
-    fit_csv = os.path.join(args.data_dir, f'{tag}-fits.csv')
+    fit_csv = os.path.join(out_dir, f'{tag}-fits.csv')
     if os.path.exists(fit_csv):
         with open(fit_csv) as f:
             for r in csv.DictReader(f):
@@ -170,7 +176,7 @@ def main():
     fig.suptitle(f'{args.sim} snapshot {args.snap}: direct v_travel '
                  f'({args.weights}-weighted COM of selected stars, host frame)', fontsize=11)
     fig.tight_layout()
-    out_png = os.path.join(args.data_dir, f'{tag}-direct{suffix}.png')
+    out_png = os.path.join(out_dir, f'{tag}-direct{suffix}.png')
     fig.savefig(out_png, dpi=150)
     print('saved', out_png)
 

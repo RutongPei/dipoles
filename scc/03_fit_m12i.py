@@ -39,6 +39,7 @@ ap.add_argument('--nproc', type=int, default=int(os.environ.get('NSLOTS', 1)))
 args = ap.parse_args()
 
 data_dir = dipole.get_data_directory()
+out_dir = dipole.get_results_directory(args.sim, args.snap)
 d = np.load(os.path.join(data_dir, f'{args.sim}-{args.snap}-halostars.npz'))
 xyz = d['xyz'].astype(np.float64)
 v_sph = d['v_sph'].astype(np.float64)
@@ -125,7 +126,7 @@ for r in results:
                  *r[7:10], *(10**np.array(r[10:13])), r[13], r[14]])
 header = ('mask,selection,center_kpc,N,v_travel,theta_deg,phi_deg,poisson_floor,'
           'vx,vy,vz,vr_mean,vtheta_mean,vphi_mean,sigma_r,sigma_theta,sigma_phi,converged,fit_seconds')
-out_csv = os.path.join(data_dir, f'{args.sim}-{args.snap}-fits{"-global" if args.niter else ""}.csv')
+out_csv = os.path.join(out_dir, f'{args.sim}-{args.snap}-fits{"-global" if args.niter else ""}.csv')
 with open(out_csv, 'w') as f:
     f.write(header + '\n')
     for row in rows:
@@ -158,6 +159,6 @@ axes[0].plot([], [], ls=':', color='k', label='dotted: noise-only floor at that 
 axes[0].legend(fontsize=8, frameon=False)
 fig.suptitle(f'{args.sim} snapshot {args.snap} (z = 0, no LMC): fitted reflex dipole', fontsize=11)
 fig.tight_layout()
-out_png = os.path.join(data_dir, f'{args.sim}-{args.snap}-dipole{"-global" if args.niter else ""}.png')
+out_png = os.path.join(out_dir, f'{args.sim}-{args.snap}-dipole{"-global" if args.niter else ""}.png')
 fig.savefig(out_png, dpi=150)
 print('saved', out_png, f'(total {time.time() - t0:.0f} s)')

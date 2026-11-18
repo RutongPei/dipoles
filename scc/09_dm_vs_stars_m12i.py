@@ -31,7 +31,7 @@ complementary selections of up to 25M particles; login nodes kill it at 15 min C
     python scc/09_dm_vs_stars_m12i.py --show-dm-all    # also plot DM without the subhalo mask
     python scc/09_dm_vs_stars_m12i.py --replot         # plot from the csv only, no snapshot read
 
-Outputs ($DIPOLE_DATA_DIR):
+Outputs ($DIPOLE_RESULTS_DIR/m12i-600/, default /projectnb/fire-reflex/rpei/results/m12i-600/):
     m12i-600-dm-vs-stars.csv   rows: tracer (stars_all_masks, dm_bound_removed, dm_all) x selection x centre
     m12i-600-dm-vs-stars.png
 """
@@ -181,11 +181,17 @@ def main():
     ap.add_argument('--show-dm-all', action='store_true', help='also plot DM without subhalo mask')
     ap.add_argument('--replot', action='store_true', help='only redraw the figure from the csv')
     ap.add_argument('--data-dir', default=os.environ.get('DIPOLE_DATA_DIR',
-                                                         '/projectnb/fire-reflex/rpei/data'))
+                                                         '/projectnb/fire-reflex/rpei/data'),
+                    help='inputs: halostars/streammasks npz, catalogues')
+    ap.add_argument('--results-dir', default=os.environ.get('DIPOLE_RESULTS_DIR',
+                                                            '/projectnb/fire-reflex/rpei/results'),
+                    help='outputs go to <results-dir>/<sim>-<snap>/')
     args = ap.parse_args()
     tag = f'{args.sim}-{args.snap}'
-    out_csv = os.path.join(args.data_dir, f'{tag}-dm-vs-stars.csv')
-    out_png = os.path.join(args.data_dir, f'{tag}-dm-vs-stars.png')
+    out_dir = os.path.join(args.results_dir, tag)
+    os.makedirs(out_dir, exist_ok=True)
+    out_csv = os.path.join(out_dir, f'{tag}-dm-vs-stars.csv')
+    out_png = os.path.join(out_dir, f'{tag}-dm-vs-stars.png')
     tracers = ['stars_all_masks', 'dm_bound_removed'] + (['dm_all'] if args.show_dm_all else [])
     if args.replot:
         plot(out_csv, out_png, args.sim, tracers)

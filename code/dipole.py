@@ -48,7 +48,8 @@ import halo_analysis as halo
 from pygaia import proper_motion_uncertainty
 
 SIM_ROOT = os.environ.get('FIRE_SIM_ROOT', '/projectnb/fire-reflex/latte')
-DATA_DIR = os.environ.get('DIPOLE_DATA_DIR', '/projectnb/fire-reflex/rpei/data')
+DATA_DIR = os.environ.get('DIPOLE_DATA_DIR', '/projectnb/fire-reflex/rpei/data')       # inputs
+RESULTS_DIR = os.environ.get('DIPOLE_RESULTS_DIR', '/projectnb/fire-reflex/rpei/results')  # outputs
 
 # tracer array is [relative distance err, vlos err, absolute magnitude]
 # distances + vlos errors from Adrian. absmags are from:
@@ -67,6 +68,13 @@ def get_simulation_directory(sim):
 
 def get_data_directory():
     return DATA_DIR
+
+
+def get_results_directory(sim, snapshot):
+    """Plots and csv tables for one host/snapshot: <RESULTS_DIR>/<sim>-<snapshot>/ (created)."""
+    path = os.path.join(RESULTS_DIR, f'{sim}-{snapshot}')
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
 def get_rockstar_directory(sim):

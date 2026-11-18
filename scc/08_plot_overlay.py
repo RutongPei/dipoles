@@ -34,12 +34,18 @@ def main():
     ap.add_argument('--xlim', type=float, nargs=2, default=[25, 305])
     ap.add_argument('--ylim', type=float, nargs=2, default=[0, 100])
     ap.add_argument('--data-dir', default=os.environ.get('DIPOLE_DATA_DIR',
-                                                         '/projectnb/fire-reflex/rpei/data'))
+                                                         '/projectnb/fire-reflex/rpei/data'),
+                    help='inputs: halostars/streammasks npz, catalogues')
+    ap.add_argument('--results-dir', default=os.environ.get('DIPOLE_RESULTS_DIR',
+                                                            '/projectnb/fire-reflex/rpei/results'),
+                    help='outputs go to <results-dir>/<sim>-<snap>/')
     args = ap.parse_args()
     tag = f'{args.sim}-{args.snap}'
+    out_dir = os.path.join(args.results_dir, tag)
+    os.makedirs(out_dir, exist_ok=True)
     suffix = '' if args.weights == 'mass' else '-number'
 
-    with open(os.path.join(args.data_dir, f'{tag}-progressive-direct{suffix}.csv')) as f:
+    with open(os.path.join(out_dir, f'{tag}-progressive-direct{suffix}.csv')) as f:
         rows = [r for r in csv.DictReader(f) if r['step'] == args.step]
     if not rows:
         raise SystemExit(f'no step {args.step!r} in the csv (run 06 first)')
@@ -68,7 +74,7 @@ def main():
         title += f' (snapshot {args.snap})'
     ax.set_title(title)
     fig.tight_layout()
-    out = os.path.join(args.data_dir, f'{tag}-{args.step}-overlay{suffix}.png')
+    out = os.path.join(out_dir, f'{tag}-{args.step}-overlay{suffix}.png')
     fig.savefig(out, dpi=150)
     print('saved', out)
 

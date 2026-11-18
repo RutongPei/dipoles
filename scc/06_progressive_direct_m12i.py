@@ -64,9 +64,15 @@ def main():
     ap.add_argument('--snap', type=int, default=600)
     ap.add_argument('--weights', choices=['mass', 'number'], default='mass')
     ap.add_argument('--data-dir', default=os.environ.get('DIPOLE_DATA_DIR',
-                                                         '/projectnb/fire-reflex/rpei/data'))
+                                                         '/projectnb/fire-reflex/rpei/data'),
+                    help='inputs: halostars/streammasks npz, catalogues')
+    ap.add_argument('--results-dir', default=os.environ.get('DIPOLE_RESULTS_DIR',
+                                                            '/projectnb/fire-reflex/rpei/results'),
+                    help='outputs go to <results-dir>/<sim>-<snap>/')
     args = ap.parse_args()
     tag = f'{args.sim}-{args.snap}'
+    out_dir = os.path.join(args.results_dir, tag)
+    os.makedirs(out_dir, exist_ok=True)
 
     d = np.load(os.path.join(args.data_dir, f'{tag}-halostars.npz'))
     sm = np.load(os.path.join(args.data_dir, f'{tag}-streammasks.npz'))
@@ -128,13 +134,13 @@ def main():
                   f'final step ({steps[-1][0]}) {last[5]:6.1f} +- {last[8]:4.1f} km/s', flush=True)
 
     suffix = '' if args.weights == 'mass' else '-number'
-    f1 = os.path.join(args.data_dir, f'{tag}-progressive-direct{suffix}.csv')
+    f1 = os.path.join(out_dir, f'{tag}-progressive-direct{suffix}.csv')
     with open(f1, 'w', newline='') as f:
         wr = csv.writer(f)
         wr.writerow(['step', 'selection', 'center_kpc', 'N', 'weight_frac_kept', 'v_travel',
                      'theta_deg', 'phi_deg', 'shot_noise_floor', 'vx', 'vy', 'vz'])
         wr.writerows([[fmt(x) for x in r] for r in step_rows])
-    f2 = os.path.join(args.data_dir, f'{tag}-progressive-components{suffix}.csv')
+    f2 = os.path.join(out_dir, f'{tag}-progressive-components{suffix}.csv')
     with open(f2, 'w', newline='') as f:
         wr = csv.writer(f)
         wr.writerow(['piece', 'selection', 'center_kpc', 'N', 'weight_frac', 'c_along_vall',
@@ -165,7 +171,7 @@ def main():
             else f' (snapshot {args.snap})'
     fig.suptitle(title, fontsize=12)
     fig.tight_layout()
-    out = os.path.join(args.data_dir, f'{tag}-progressive-direct{suffix}.png')
+    out = os.path.join(out_dir, f'{tag}-progressive-direct{suffix}.png')
     fig.savefig(out, dpi=150)
     print('saved', out)
 
